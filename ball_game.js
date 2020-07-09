@@ -192,6 +192,7 @@ function touchingAnotherNode(node){
                         nodeMap.get(node).push(key);
                     }
                     touching = true;
+
                 }
             }
         }
@@ -234,68 +235,37 @@ function moveBubbles(){
                 var y_diff = (key1.y - key2.y);
                 var x_diff = (key1.x - key2.x);
 
-                var angle = Math.abs(Math.atan(y_diff/x_diff));
                 var total_radius = Math.sqrt(Math.pow(x_diff,2)+Math.pow(y_diff,2));
-                
+                var rect = canvas_obj.getBoundingClientRect();
                 var Xforce = -1*(x_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
+                    if (Math.abs(x_diff) <= (key1.radius/2 + key2.radius/2)) {// this means the nodes are touching
+                        Xforce *= -0.01;
+                        // let K = 0.000000000000000001;
+                        // Xforce += -K*((key1.radius/2 + key2.radius/2)-Math.abs(x_diff));
+                    }
+                    if (key1.x <= rect.left + key1.radius/2 || key1.x >= rect.right - key1.radius/2) {//this means it's touching the left border
+                        Xforce *= 0;
+                    }
                 var Yforce = -1*(y_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
-
+                    if (Math.abs(y_diff) <= (key1.radius/2 + key2.radius/2)) {// this means the nodes are touching
+                        Yforce *= -0.01
+                        // let K = 0.00000000000000000001;
+                        // Yforce += -K*((key1.radius/2 + key2.radius/2)-Math.abs(y_diff));
+                    }
+                    if (key1.y <= rect.top + key1.radius/2 || key1.y >= rect.bottom - key1.radius/2) {//this means it's touching the left border
+                        Yforce *= 0;
+                    }
                 total_force.x += Xforce
                 total_force.y += Yforce
+
             }
         }
+        //Actual Movement happens here
+        key1.xVelocity += total_force.x/key1.mass*Math.pow(10, -3);
+        key1.x += key1.xVelocity*Math.pow(10, -3)
+        key1.yVelocity += total_force.y/key1.mass*Math.pow(10, -3);
+        key1.y += key1.yVelocity*Math.pow(10, -3)
         
-        
-        if (Math.abs(total_force.x) > 0.00001){ // Move x
-            if(!touchingAnotherNode(key1)){
-                key1.xVelocity += total_force.x/key1.mass*Math.pow(10, -3);
-                key1.x += key1.xVelocity*Math.pow(10, -3)
-            } else { // key1 is touching another node
-                if(nodeMap.get(key1).length <= 1 && nodeMap.size>2){
-                    key1.color = 'LightCoral'
-                    //make vector from this node to middle of touching node
-                    var otherNode = nodeMap.get(key1)[0];
-                    var vect_y= ( otherNode.y - key1.y);
-                    var vect_x = (otherNode.x - key1.x);
-                    var cw_vector = new force_vector();
-                    cw_vector.x = vect_y;
-                    cw_vector.y = -1*vect_x;
-                    var ccw_vector = new force_vector();
-                    ccw_vector.x = -1*vect_y;
-                    ccw_vector.y = vect_x;
-
-                    //find distance between cw and force
-                    var x_diff_cw = total_force.x - cw_vector.x;
-                    var y_diff_cw = total_force.y - cw_vector.y;
-                    var dist_cw = Math.sqrt(Math.pow(x_diff_cw,2) + Math.pow(y_diff_cw,2));
-
-                    //find distance between ccw and force
-                    var x_diff_ccw = total_force.x - ccw_vector.x;
-                    var y_diff_ccw = total_force.y - ccw_vector.y;
-                    var dist_ccw = Math.sqrt(Math.pow(x_diff_ccw,2) + Math.pow(y_diff_ccw,2));
-                    
-                    // move to either cw or ccw
-                    if(dist_cw < dist_ccw){ //cw is closer to force vector
-                        key1.x += Math.sign(cw_vector.x);
-                        key1.y += Math.sign(cw_vector.y);
-                    } else { //ccw is closer to force vector
-                        key1.x += Math.sign(ccw_vector.x);
-                        key1.y += Math.sign(ccw_vector.y);
-                    }
-                } else {
-                    key1.color = 'DeepPink';
-                }
-            }
-        }
-
-
-        if (Math.abs(total_force.y) > 0.00001){ // Move y
-            if(!touchingAnotherNode(key1)){
-                key1.yVelocity += total_force.y/key1.mass*Math.pow(10, -3);
-                key1.y += key1.yVelocity*Math.pow(10, -3)
-            }
-        }
-
         key1.update();
 
     }
