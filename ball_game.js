@@ -1,32 +1,34 @@
-var myGameArea;
-var canvasHeight = 600;
-var canvasWidth = 800;
-var mouseX = 0;
-var mouseY = 0;
+let myGameArea;
+let canvasHeight = 600;
+let canvasWidth = 800;
+let mouseX = 0;
+let mouseY = 0;
 
-var myGamePieceWidth = 20;
-var myGamePieceHeight = 20;
+let myGamePieceWidth = 20; //meters
+let myGamePieceHeight = 20; //meters
 
-var ballRadius = 20;
+let ballRadius = 20; //meters
+let ballMass = 1; //kilogram
+const gravity = 9.81; //need to work where this means 9.81 m/s^2
 
-var canvas_obj = document.getElementById("canvas");
-var context_obj = canvas_obj.getContext("2d");
+let canvas_obj = document.getElementById("canvas");
+let context_obj = canvas_obj.getContext("2d");
 
 //Node object, node position/information
 let nodeMap = new Map();
-var mouseNode;
+let mouseNode;
 
-var myCircle;
+let myCircle;
 
 function startGame() {
     myGameArea.start();
     myGamePiece = new component( myGamePieceWidth, myGamePieceHeight,'red', 10, 30);
 
-    mouseNode = new nodeComponent(0, 'black', mouseX, mouseY);
+    mouseNode = new nodeComponent(0, 0, 'black', mouseX, mouseY);
 
     document.addEventListener("mousedown", function (event) {
         if(isInCanvas()){
-            var clickedNodeObj = clickedNode();
+            let clickedNodeObj = clickedNode();
             if (clickedNodeObj == null){
                 //TODO: make sure that you don't add and make connection
                 addNode();
@@ -36,7 +38,7 @@ function startGame() {
 }
 
 function isInCanvas(){
-    var rect = canvas_obj.getBoundingClientRect();
+    let rect = canvas_obj.getBoundingClientRect();
     if (mouseX < rect.right && mouseX > 0 &&  
         mouseY < rect.bottom && mouseY > rect.top){
         
@@ -48,7 +50,7 @@ function isInCanvas(){
 
 
 function containsObject(obj, list) {
-    var i;
+    let i;
     for (i = 0; i < list.length; i++) {
         if (list[i] === obj) {
             return true;
@@ -70,12 +72,12 @@ function clickedNode(){
 }
 
 function addNode(){
-    // var color ="#"+((1<<24)*Math.random()|0).toString(16);
-    newNode = new nodeComponent(ballRadius,'pink', mouseX - ballRadius/2, mouseY - ballRadius/2);
+    // let color ="#"+((1<<24)*Math.random()|0).toString(16);
+    newNode = new nodeComponent(mass, ballRadius,'pink', mouseX - ballRadius/2, mouseY - ballRadius/2);
     nodeMap.set(newNode, []);   
 }
 
-var myGameArea = {
+let myGameArea = {
     canvas: document.getElementById("canvas"),
     start: function () {
         this.canvas.width = canvasWidth;
@@ -107,19 +109,20 @@ function component(width, height, color, x, y) {
 
 
 
-function nodeComponent(radius, color, x, y) {
+function nodeComponent(mass, radius, color, x, y) {
     this.x = x;
     this.y = y;
     this.radius = radius;
     this.color = color;
+    this.mass = mass;
 
-    var innerRad = 6;
-    var outerRad = 20;
+    let innerRad = 6;
+    let outerRad = 20;
 
     this.update = function () {
         
 
-        var gradient_center = ctx.createRadialGradient(this.x, this.y, innerRad, this.x, this.y, outerRad);
+        let gradient_center = ctx.createRadialGradient(this.x, this.y, innerRad, this.x, this.y, outerRad);
         gradient_center.addColorStop(0, 'pink');
         gradient_center.addColorStop(1, 'DeepPink');
 
@@ -131,7 +134,7 @@ function nodeComponent(radius, color, x, y) {
     }
     this.update_gradient = function () {
         
-        var gradient_outer = ctx.createRadialGradient(this.x, this.y, innerRad*10, this.x, this.y, outerRad);
+        let gradient_outer = ctx.createRadialGradient(this.x, this.y, innerRad*10, this.x, this.y, outerRad);
         gradient_outer.addColorStop(0, 'rgba(52, 124, 232, 0.0)');
         gradient_outer.addColorStop(1, 'rgba(52, 124, 232, 0.4)');
     
@@ -166,7 +169,7 @@ function updateGameArea() {
 }
 
 function getMousePos(evt) {
-    var rect = canvas_obj.getBoundingClientRect();
+    let rect = canvas_obj.getBoundingClientRect();
     mouseX = evt.clientX - rect.left;
     mouseY = evt.clientY - rect.top;
 }
@@ -177,7 +180,7 @@ function force_vector(){
 }
 
 function touchingAnotherNode(node){
-    var touching = false;
+    let touching = false;
     // nodeMap.get(node) = [];
     for (let key of nodeMap.keys()) {
         if (key != node){
@@ -197,8 +200,8 @@ function touchingAnotherNode(node){
 
 function canMoveX(node, movement){
     nodeMap.get(node).forEach(connectedNode => {
-        var distance_before = Math.sqrt(Math.pow(connectedNode.x - node.x,2) + Math.pow(connectedNode.y-node.y,2));
-        var distance_after = Math.sqrt(Math.pow((node.x+movement)-connectedNode.x  ,2) + Math.pow(connectedNode.y-node.y,2));
+        let distance_before = Math.sqrt(Math.pow(connectedNode.x - node.x,2) + Math.pow(connectedNode.y-node.y,2));
+        let distance_after = Math.sqrt(Math.pow((node.x+movement)-connectedNode.x  ,2) + Math.pow(connectedNode.y-node.y,2));
         
 
         console.log("Distance before: " + distance_before.toString() + " Distance After: " + distance_after.toString());
@@ -222,17 +225,17 @@ function moveBubbles(){
     //cycle through nodes until equilibrium
     for (let key1 of nodeMap.keys()) {
         // key1.color = "#"+((1<<24)*Math.random()|0).toString(16);
-        var total_force = new force_vector();
+        let total_force = new force_vector();
         for (let key2 of nodeMap.keys()) {
             if(key1 != key2){
 
-                var y_diff = (key2.y - key1.y);
-                var x_diff = (key2.x - key1.x);
+                let y_diff = (key2.y - key1.y);
+                let x_diff = (key2.x - key1.x);
 
-                var angle = Math.abs(Math.atan(y_diff/x_diff));
-                var total_radius = Math.sqrt(Math.pow(x_diff,2)+Math.pow(y_diff,2));
+                let angle = Math.abs(Math.atan(y_diff/x_diff));
+                let total_radius = Math.sqrt(Math.pow(x_diff,2)+Math.pow(y_diff,2));
                 
-                var force = 1/Math.pow(total_radius,2);
+                let force = 1/Math.pow(total_radius,2);
 
                 total_force.x += Math.sign(x_diff)*force*Math.cos(angle);
                 total_force.y += Math.sign(y_diff)*force*Math.sin(angle);
@@ -247,25 +250,25 @@ function moveBubbles(){
                 if(nodeMap.get(key1).length <= 1 && nodeMap.size>2){
                     key1.color = 'LightCoral'
                     //make vector from this node to middle of touching node
-                    var otherNode = nodeMap.get(key1)[0];
-                    var vect_y= ( otherNode.y - key1.y);
-                    var vect_x = (otherNode.x - key1.x);
-                    var cw_vector = new force_vector();
+                    let otherNode = nodeMap.get(key1)[0];
+                    let vect_y= ( otherNode.y - key1.y);
+                    let vect_x = (otherNode.x - key1.x);
+                    let cw_vector = new force_vector();
                     cw_vector.x = vect_y;
                     cw_vector.y = -1*vect_x;
-                    var ccw_vector = new force_vector();
+                    let ccw_vector = new force_vector();
                     ccw_vector.x = -1*vect_y;
                     ccw_vector.y = vect_x;
 
                     //find distance between cw and force
-                    var x_diff_cw = total_force.x - cw_vector.x;
-                    var y_diff_cw = total_force.y - cw_vector.y;
-                    var dist_cw = Math.sqrt(Math.pow(x_diff_cw,2) + Math.pow(y_diff_cw,2));
+                    let x_diff_cw = total_force.x - cw_vector.x;
+                    let y_diff_cw = total_force.y - cw_vector.y;
+                    let dist_cw = Math.sqrt(Math.pow(x_diff_cw,2) + Math.pow(y_diff_cw,2));
 
                     //find distance between ccw and force
-                    var x_diff_ccw = total_force.x - ccw_vector.x;
-                    var y_diff_ccw = total_force.y - ccw_vector.y;
-                    var dist_ccw = Math.sqrt(Math.pow(x_diff_ccw,2) + Math.pow(y_diff_ccw,2));
+                    let x_diff_ccw = total_force.x - ccw_vector.x;
+                    let y_diff_ccw = total_force.y - ccw_vector.y;
+                    let dist_ccw = Math.sqrt(Math.pow(x_diff_ccw,2) + Math.pow(y_diff_ccw,2));
                     
                     // move to either cw or ccw
                     if(dist_cw < dist_ccw){ //cw is closer to force vector
