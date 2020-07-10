@@ -1,6 +1,7 @@
+//todo: implement conservation of energy. 
 var myGameArea;
-var canvasHeight = 600;
-var canvasWidth = 800;
+var canvasHeight = 800;
+var canvasWidth = 1000;
 var mouseX = 0;
 var mouseY = 0;
 
@@ -73,7 +74,7 @@ function clickedNode(){
 
 function addNode(){
     // var color ="#"+((1<<24)*Math.random()|0).toString(16);
-    newNode = new nodeComponent(0, 0, ballMass, ballRadius,'pink', mouseX - ballRadius/2, mouseY - ballRadius/2);
+    newNode = new nodeComponent(0, 0, ballMass, ballRadius,'pink', mouseX, mouseY);
     nodeMap.set(newNode, []);   
 }
 
@@ -238,26 +239,31 @@ function moveBubbles(){
                 var total_radius = Math.sqrt(Math.pow(x_diff,2)+Math.pow(y_diff,2));
                 var rect = canvas_obj.getBoundingClientRect();
                 var Xforce = -1*(x_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
-                    if (Math.abs(x_diff) <= (key1.radius/2 + key2.radius/2)) {// this means the nodes are touching
-                        Xforce *= -0.01;
-                        // let K = 0.000000000000000001;
-                        // Xforce += -K*((key1.radius/2 + key2.radius/2)-Math.abs(x_diff));
+                if (Math.abs(x_diff) <= (key1.radius + key2.radius) && Math.abs(y_diff)<= (key1.radius + key2.radius)) {// this means the nodes are touching
+                    for (connectedNode in nodeMap.get(key1)){
+                        let k = Math.pow(10,20)
+                        
+                        
+                        if (key1.xVelocity*(connectedNode.x-key1.x) > 0) {
+                            total_force.x += -k*((key1.radius + connectedNode.radius) - connectedNode.x - node.x)
+                        }
+                        if (key1.yVelocity*(connectedNode.y-key1.y) > 0) {
+                            total_force.y += -k*((key1.radius + connectedNode.radius) - connectedNode.y - node.y)
+                        }
+                        //if the x1 velocity is the same sign as x2 - x1, reverse the x velocity
+                        //if the y1 velocity is the same sign as the y2 - y1, reverse the y velocity
                     }
-                    if (key1.x <= rect.left + key1.radius/2 || key1.x >= rect.right - key1.radius/2) {//this means it's touching the left border
-                        Xforce *= 0;
-                    }
+                }
                 var Yforce = -1*(y_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
-                    if (Math.abs(y_diff) <= (key1.radius/2 + key2.radius/2)) {// this means the nodes are touching
-                        Yforce *= -0.01
-                        // let K = 0.00000000000000000001;
-                        // Yforce += -K*((key1.radius/2 + key2.radius/2)-Math.abs(y_diff));
-                    }
-                    if (key1.y <= rect.top + key1.radius/2 || key1.y >= rect.bottom - key1.radius/2) {//this means it's touching the left border
-                        Yforce *= 0;
-                    }
+
+                if (key1.x > rect.right || key1.x < 0 ||  
+                    key1.y > rect.bottom || key1.y < rect.top) {//this means it's touching the borders
+             
+                    nodeMap.delete(key1);
+            }
                 total_force.x += Xforce
                 total_force.y += Yforce
-
+        
             }
         }
         //Actual Movement happens here
