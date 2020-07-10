@@ -1,15 +1,19 @@
 //todo: implement conservation of energy. 
 var myGameArea;
-var canvasHeight = 800;
-var canvasWidth = 1000;
+var canvasHeight = 900;
+var canvasWidth = 1600;
 var mouseX = 0;
 var mouseY = 0;
-const t = 0.1; //this will be the time interval
-earthRadius = 6.371*Math.pow(10,6);
-earthMass = 5.972*Math.pow(10,24);
+const t = 1; //this will be the time interval
+var earthRadius = 6.371*Math.pow(10,6);
+var earthMass = 5.972*Math.pow(10,24);
+let scale = parseInt(window.prompt("Choose scale from 1-100")) || 0;
+    if (scale == 0){
+        scale = 50; 
+    }
 
-var myGamePieceWidth = 20;
-var myGamePieceHeight = 20;
+var myGamePieceWidth = 20;//earthRadius/Math.pow(10,6);
+var myGamePieceHeight = 20;//earthRadius/Math.pow(10,6);
 
 var ballRadius = 20;
 var ballMass = 5*Math.pow(10,18); //add ball mass, 1 kg
@@ -76,14 +80,66 @@ function clickedNode(){
 }
 
 function addNode(){
-    // var color ="#"+((1<<24)*Math.random()|0).toString(16);
-    // var userMass = Math.pow(10,18)*window.prompt("Enter ball mass * 10^18kg: ");
-    // var userRadius = window.prompt("Enter ball radius: ");
-    // var userXVelocity = window.prompt("Enter XVelocity: ");
-    // var userYVelocity = window.prompt("Enter YVelocity: ");
-    // newNode = new nodeComponent(userXVelocity, userYVelocity, userMass, userRadius,'pink', mouseX, mouseY);
-    newNode = new nodeComponent(0, 0, ballMass, ballRadius,'pink', mouseX, mouseY);
-    //newNode = new nodeComponent(0, 0, ballMass, ballRadius,'pink', mouseX, mouseY);
+    var CellestialBody = window.prompt("Enter 'sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', or blank to enter your own specs");
+    if (CellestialBody == ''){
+    var userMass = parseInt(Math.pow(10,24)*window.prompt("Enter ball mass * 10^24kg (sun enter 2,000,000, earth enter 6): ")) || Math.pow(10,24)*2000;
+
+    var userRadius = parseInt(Math.pow(10,6)*window.prompt("Enter ball radius * 10^6 M, (sun enter 696, Earth enter 6): ")) || 69*Math.pow(10,6);
+
+    }
+    else if (CellestialBody == 'sun'){
+        var userMass = 2000000*Math.pow(10,24);
+        var userRadius = 696*Math.pow(10,6);
+    }
+
+    else if (CellestialBody == 'earth'){
+        var userMass = 6*Math.pow(10,24);
+        var userRadius = 6*Math.pow(10,6);
+    }
+
+    else if (CellestialBody == 'jupiter'){
+        var userMass = 2000*Math.pow(10,24);
+        var userRadius = 69*Math.pow(10,6);
+    }
+
+    else if (CellestialBody == 'saturn'){
+        var userMass = 5.683*Math.pow(10,26);
+        var userRadius = 58.2*Math.pow(10,6);
+    }
+
+    else if (CellestialBody == 'uranus'){
+        var userMass = 8.68*Math.pow(10,25);
+        var userRadius = 25.3*Math.pow(10,6);
+    }
+
+    else if (CellestialBody == 'neptune'){
+        var userMass = 1.024*Math.pow(10,24);
+        var userRadius = 24.6*Math.pow(10,6);
+    }
+
+    else if (CellestialBody == 'venus'){
+        var userMass = 4.867*Math.pow(10,24);
+        var userRadius = 6.0518*Math.pow(10,6);
+    }
+
+    else if (CellestialBody == 'mars'){
+        var userMass = 6.39*Math.pow(10,23);
+        var userRadius = 3.385*Math.pow(10,6);
+    }
+
+    else if (CellestialBody == 'mercury'){
+        var userMass = 3.285*Math.pow(10,23);
+        var userRadius = 2.44*Math.pow(10,6);
+    }
+
+
+
+    var userXVelocity = parseInt(window.prompt("Enter XVelocity: ")) || 0;
+
+    var userYVelocity = -1*parseInt(window.prompt("Enter YVelocity: ")) || 0;
+
+
+    newNode = new nodeComponent(userXVelocity, userYVelocity, userMass, userRadius,'pink', mouseX, mouseY);
     nodeMap.set(newNode, []);   
 }
 
@@ -129,17 +185,17 @@ function component(width, height, color, x, y) {
 
 
 
-function nodeComponent(xVelocity, yVelocity, mass, radius, color, x, y) {
+function nodeComponent(xVelocity, yVelocity, mass, bigRadius, color, x, y) {
     this.xVelocity = xVelocity;
     this.yVelocity = yVelocity;
     this.mass = mass;
     this.x = x;
     this.y = y;
-    this.radius = radius;
+    this.radius = 3/50*bigRadius/Math.pow(10,7)*scale;
     this.color = color;
 
-    var innerRad = 6;
-    var outerRad = 20;
+    var innerRad = this.radius / 3;
+    var outerRad = this.radius;
 
     this.update = function () {
         
@@ -253,19 +309,19 @@ function moveBubbles(){
         for (let key2 of nodeMap.keys()) {
             if(key1 != key2){
 
-                var y_diff = (key1.y - key2.y);
-                var x_diff = (key1.x - key2.x);
+                var y_diff = Math.pow(10,6)*(key1.y - key2.y);
+                var x_diff = Math.pow(10,6)*(key1.x - key2.x);
 
                 var total_radius = Math.sqrt(Math.pow(x_diff,2)+Math.pow(y_diff,2));
                 var rect = canvas_obj.getBoundingClientRect();
                 var Xforce = -1*(x_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
                 var Yforce = -1*(y_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
 
-                if (key1.x > rect.right || key1.x < 0 ||  
-                    key1.y > rect.bottom || key1.y < rect.top) {//this means it's touching the borders
+            //     if (key1.x > rect.right || key1.x < 0 ||  
+            //         key1.y > rect.bottom || key1.y < rect.top) {//this means it's touching the borders
              
-                    nodeMap.delete(key1);
-            }
+            //         nodeMap.delete(key1);
+            // }
                 total_force.x += Xforce
                 total_force.y += Yforce
         
