@@ -4,13 +4,16 @@ var canvasHeight = 800;
 var canvasWidth = 1000;
 var mouseX = 0;
 var mouseY = 0;
+const t = 0.1; //this will be the time interval
+earthRadius = 6.371*Math.pow(10,6);
+earthMass = 5.972*Math.pow(10,24);
 
 var myGamePieceWidth = 20;
 var myGamePieceHeight = 20;
 
 var ballRadius = 20;
-var ballMass = 1; //add ball mass, 1 kg
-const G = 6.67*Math.pow(10,7);//should be 10^-11, but need to change units later
+var ballMass = 5*Math.pow(10,18); //add ball mass, 1 kg
+const G = 6.67*Math.pow(10,-11);//should be 10^-11, but need to change units later
 
 var canvas_obj = document.getElementById("canvas");
 var context_obj = canvas_obj.getContext("2d");
@@ -74,9 +77,25 @@ function clickedNode(){
 
 function addNode(){
     // var color ="#"+((1<<24)*Math.random()|0).toString(16);
+    // var userMass = Math.pow(10,18)*window.prompt("Enter ball mass * 10^18kg: ");
+    // var userRadius = window.prompt("Enter ball radius: ");
+    // var userXVelocity = window.prompt("Enter XVelocity: ");
+    // var userYVelocity = window.prompt("Enter YVelocity: ");
+    // newNode = new nodeComponent(userXVelocity, userYVelocity, userMass, userRadius,'pink', mouseX, mouseY);
     newNode = new nodeComponent(0, 0, ballMass, ballRadius,'pink', mouseX, mouseY);
+    //newNode = new nodeComponent(0, 0, ballMass, ballRadius,'pink', mouseX, mouseY);
     nodeMap.set(newNode, []);   
 }
+
+function getMapSize(x) {
+    var len = 0;
+    for (var count in x) {
+            len++;
+    }
+
+    return len;
+}
+
 
 var myGameArea = {
     canvas: document.getElementById("canvas"),
@@ -89,7 +108,7 @@ var myGameArea = {
 
         
 
-        this.interval = setInterval(updateGameArea, 1); //updates every millisecond
+        this.interval = setInterval(updateGameArea, t); //updates every millisecond
     },
     clear: function () {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -189,6 +208,7 @@ function touchingAnotherNode(node){
         if (key != node){
             if (Math.abs(node.x - key.x) < ballRadius*2){
                 if (Math.abs(node.y - key.y) < ballRadius*2){
+                    nodeMap.get(node).push(key); //delete again
                     if (!nodeMap.get(node).includes(key)){
                         nodeMap.get(node).push(key);
                     }
@@ -203,9 +223,9 @@ function touchingAnotherNode(node){
 
 
 function canMoveX(node, movement){
-    nodeMap.get(node).forEach(connectedNode => {
-        var distance_before = Math.sqrt(Math.pow(connectedNode.x - node.x,2) + Math.pow(connectedNode.y-node.y,2));
-        var distance_after = Math.sqrt(Math.pow((node.x+movement)-connectedNode.x  ,2) + Math.pow(connectedNode.y-node.y,2));
+    nodeMap.get(node).forEach(key2 => {
+        var distance_before = Math.sqrt(Math.pow(key2.x - node.x,2) + Math.pow(key2.y-node.y,2));
+        var distance_after = Math.sqrt(Math.pow((node.x+movement)-key2.x  ,2) + Math.pow(key2.y-node.y,2));
         
 
         console.log("Distance before: " + distance_before.toString() + " Distance After: " + distance_after.toString());
@@ -239,21 +259,6 @@ function moveBubbles(){
                 var total_radius = Math.sqrt(Math.pow(x_diff,2)+Math.pow(y_diff,2));
                 var rect = canvas_obj.getBoundingClientRect();
                 var Xforce = -1*(x_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
-                if (Math.abs(x_diff) <= (key1.radius + key2.radius) && Math.abs(y_diff)<= (key1.radius + key2.radius)) {// this means the nodes are touching
-                    for (connectedNode in nodeMap.get(key1)){
-                        let k = Math.pow(10,20)
-                        
-                        
-                        if (key1.xVelocity*(connectedNode.x-key1.x) > 0) {
-                            total_force.x += -k*((key1.radius + connectedNode.radius) - connectedNode.x - node.x)
-                        }
-                        if (key1.yVelocity*(connectedNode.y-key1.y) > 0) {
-                            total_force.y += -k*((key1.radius + connectedNode.radius) - connectedNode.y - node.y)
-                        }
-                        //if the x1 velocity is the same sign as x2 - x1, reverse the x velocity
-                        //if the y1 velocity is the same sign as the y2 - y1, reverse the y velocity
-                    }
-                }
                 var Yforce = -1*(y_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
 
                 if (key1.x > rect.right || key1.x < 0 ||  
@@ -265,12 +270,34 @@ function moveBubbles(){
                 total_force.y += Yforce
         
             }
+
+            if (Math.abs(x_diff) <= (key1.radius + key2.radius) && Math.abs(y_diff) <= (key1.radius + key2.radius) ){
+                let D = 1; //damping factor
+                let M = key1.mass + key2.mass;
+                let v1x = key1.xVelocity;
+                let v1y = key1.yVelocity;
+                let v2x = key2.xVelocity;
+                let v2y = key2.yVelocity;
+                let m1 = key1.mass;
+                let m2 = key2.mass;
+                if (key1.xVelocity*(key2.x-key1.x) > 0) {
+                    key1.xVelocity = D*(m1-m2)*v1x/M + (2*m2)*v2x/M
+                    key2.xVelocity = D*(2*m1)*v1x/M + (m2-m1)*v2x/M
+                }
+                if (key1.yVelocity*(key2.y-key1.y) > 0) {
+                    // total_force.y += -k*((key1.radius + key2.radius) - key2.y - node.y)
+                    key1.yVelocity = D*(m1-m2)*v1y/M + (2*m2)*v2y/M
+                    key2.yVelocity = D*(2*m1)*v1y/M + (m2-m1)*v2y/M
+                }
+                //if the x1 velocity is the same sign as x2 - x1, reverse the x velocity
+                //if the y1 velocity is the same sign as the y2 - y1, reverse the y velocity
+            }
         }
         //Actual Movement happens here
-        key1.xVelocity += total_force.x/key1.mass*Math.pow(10, -3);
-        key1.x += key1.xVelocity*Math.pow(10, -3)
-        key1.yVelocity += total_force.y/key1.mass*Math.pow(10, -3);
-        key1.y += key1.yVelocity*Math.pow(10, -3)
+        key1.xVelocity += total_force.x/key1.mass*t/1000;
+        key1.x += key1.xVelocity*t/1000
+        key1.yVelocity += total_force.y/key1.mass*t/1000;
+        key1.y += key1.yVelocity*t/1000
         
         key1.update();
 
