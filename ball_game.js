@@ -1,19 +1,20 @@
-//todo: implement conservation of energy. 
+//todo: implement way to get planets much bigger looking but same mass for easier visualization 
+// things seem to move larger distances at smaller scales, thats counterintuitive. 
+//scaling is a hard thing to do. Also eventually figure out the time rate.
+
 var myGameArea;
 var canvasHeight = 900;
 var canvasWidth = 1600;
 var mouseX = 0;
 var mouseY = 0;
-const t = 1; //this will be the time interval
-var earthRadius = 6.371*Math.pow(10,6);
-var earthMass = 5.972*Math.pow(10,24);
+const t = 1/50; //this will be the time interval
 let scale = parseInt(window.prompt("Choose scale from 1-100")) || 0;
     if (scale == 0){
         scale = 50; 
     }
 
-var myGamePieceWidth = 20;//earthRadius/Math.pow(10,6);
-var myGamePieceHeight = 20;//earthRadius/Math.pow(10,6);
+var myGamePieceWidth = 20;
+var myGamePieceHeight = 20;
 
 var ballRadius = 20;
 var ballMass = 5*Math.pow(10,18); //add ball mass, 1 kg
@@ -164,7 +165,7 @@ var myGameArea = {
 
         
 
-        this.interval = setInterval(updateGameArea, t); //updates every millisecond
+        this.interval = setInterval(updateGameArea, t/1000); //updates every millisecond
     },
     clear: function () {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -185,39 +186,39 @@ function component(width, height, color, x, y) {
 
 
 
-function nodeComponent(xVelocity, yVelocity, mass, bigRadius, color, x, y) {
+function nodeComponent(xVelocity, yVelocity, mass, radius, color, x, y) {
     this.xVelocity = xVelocity;
     this.yVelocity = yVelocity;
     this.mass = mass;
     this.x = x;
     this.y = y;
-    this.radius = 3/50*bigRadius/Math.pow(10,7)*scale;
+    this.radius = radius;
     this.color = color;
 
-    var innerRad = this.radius / 3;
-    var outerRad = this.radius;
+    var innerRad = 1/50*this.radius/Math.pow(10,7)*scale;
+    this.outerRad = 3/50*this.radius/Math.pow(10,7)*scale;
 
     this.update = function () {
         
 
-        var gradient_center = ctx.createRadialGradient(this.x, this.y, innerRad, this.x, this.y, outerRad);
+        var gradient_center = ctx.createRadialGradient(this.x, this.y, innerRad, this.x, this.y, this.outerRad);
         gradient_center.addColorStop(0, 'pink');
         gradient_center.addColorStop(1, 'DeepPink');
 
 
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
+        ctx.arc(this.x, this.y, this.outerRad, 0, 2 * Math.PI, false);
         ctx.fillStyle = gradient_center;
         ctx.fill();  
     }
     this.update_gradient = function () {
         
-        var gradient_outer = ctx.createRadialGradient(this.x, this.y, innerRad*10, this.x, this.y, outerRad);
+        var gradient_outer = ctx.createRadialGradient(this.x, this.y, innerRad*10, this.x, this.y, this.outerRad);
         gradient_outer.addColorStop(0, 'rgba(52, 124, 232, 0.0)');
         gradient_outer.addColorStop(1, 'rgba(52, 124, 232, 0.4)');
     
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius*7, 0, 2 * Math.PI, false);
+        ctx.arc(this.x, this.y, this.outerRad*7, 0, 2 * Math.PI, false);
         ctx.fillStyle = gradient_outer;
         ctx.fill();
         
@@ -262,8 +263,8 @@ function touchingAnotherNode(node){
     // nodeMap.get(node) = [];
     for (let key of nodeMap.keys()) {
         if (key != node){
-            if (Math.abs(node.x - key.x) < ballRadius*2){
-                if (Math.abs(node.y - key.y) < ballRadius*2){
+            if (Math.abs(node.x - key.x) < node.radius + key.radius){
+                if (Math.abs(node.y - key.y) < node.radius + key.radius){
                     nodeMap.get(node).push(key); //delete again
                     if (!nodeMap.get(node).includes(key)){
                         nodeMap.get(node).push(key);
@@ -309,13 +310,15 @@ function moveBubbles(){
         for (let key2 of nodeMap.keys()) {
             if(key1 != key2){
 
-                var y_diff = Math.pow(10,6)*(key1.y - key2.y);
-                var x_diff = Math.pow(10,6)*(key1.x - key2.x);
-
-                var total_radius = Math.sqrt(Math.pow(x_diff,2)+Math.pow(y_diff,2));
+                var y_diff = key1.y - key2.y;
+                var x_diff = key1.x - key2.x;
+                var rad_diff = Math.sqrt(Math.pow(x_diff,2)+Math.pow(y_diff,2));
+                var y_scaled = 3/50*scale*Math.pow(10,7)*y_diff;
+                var x_scaled = 3/50*scale*Math.pow(10,7)*x_diff;
+                var rad_scaled = Math.sqrt(Math.pow(x_scaled,2)+Math.pow(y_scaled,2));
                 var rect = canvas_obj.getBoundingClientRect();
-                var Xforce = -1*(x_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
-                var Yforce = -1*(y_diff/total_radius)*G*key1.mass*key2.mass/Math.pow(total_radius,2);
+                var Xforce = -1*(x_diff/rad_diff)*G*key1.mass*key2.mass/Math.pow(rad_scaled/scale/scale,2);
+                var Yforce = -1*(y_diff/rad_diff)*G*key1.mass*key2.mass/Math.pow(rad_scaled/scale/scale,2);
 
             //     if (key1.x > rect.right || key1.x < 0 ||  
             //         key1.y > rect.bottom || key1.y < rect.top) {//this means it's touching the borders
@@ -325,29 +328,30 @@ function moveBubbles(){
                 total_force.x += Xforce
                 total_force.y += Yforce
         
-            }
+            
 
-            if (Math.abs(x_diff) <= (key1.radius + key2.radius) && Math.abs(y_diff) <= (key1.radius + key2.radius) ){
-                let D = 1; //damping factor
-                let M = key1.mass + key2.mass;
-                let v1x = key1.xVelocity;
-                let v1y = key1.yVelocity;
-                let v2x = key2.xVelocity;
-                let v2y = key2.yVelocity;
-                let m1 = key1.mass;
-                let m2 = key2.mass;
-                if (key1.xVelocity*(key2.x-key1.x) > 0) {
-                    key1.xVelocity = D*(m1-m2)*v1x/M + (2*m2)*v2x/M
-                    key2.xVelocity = D*(2*m1)*v1x/M + (m2-m1)*v2x/M
-                }
-                if (key1.yVelocity*(key2.y-key1.y) > 0) {
-                    // total_force.y += -k*((key1.radius + key2.radius) - key2.y - node.y)
-                    key1.yVelocity = D*(m1-m2)*v1y/M + (2*m2)*v2y/M
-                    key2.yVelocity = D*(2*m1)*v1y/M + (m2-m1)*v2y/M
-                }
-                //if the x1 velocity is the same sign as x2 - x1, reverse the x velocity
-                //if the y1 velocity is the same sign as the y2 - y1, reverse the y velocity
+                if (Math.abs(rad_diff) <= (key1.outerRad + key2.outerRad)){
+                    let D = 1; //damping factor
+                    let M = key1.mass + key2.mass;
+                    let v1x = key1.xVelocity;
+                    let v1y = key1.yVelocity;
+                    let v2x = key2.xVelocity;
+                    let v2y = key2.yVelocity;
+                    let m1 = key1.mass;
+                    let m2 = key2.mass;
+                    if (key1.xVelocity*(key2.x-key1.x) > 0) {
+                        key1.xVelocity = D*(m1-m2)*v1x/M + (2*m2)*v2x/M
+                        key2.xVelocity = D*(2*m1)*v1x/M + (m2-m1)*v2x/M
+                    }
+                    if (key1.yVelocity*(key2.y-key1.y) > 0) {
+                        // total_force.y += -k*((key1.radius + key2.radius) - key2.y - node.y)
+                        key1.yVelocity = D*(m1-m2)*v1y/M + (2*m2)*v2y/M
+                        key2.yVelocity = D*(2*m1)*v1y/M + (m2-m1)*v2y/M
+                    }
+                    //if the x1 velocity is the same sign as x2 - x1, reverse the x velocity
+                    //if the y1 velocity is the same sign as the y2 - y1, reverse the y velocity
             }
+        }
         }
         //Actual Movement happens here
         key1.xVelocity += total_force.x/key1.mass*t/1000;
@@ -358,5 +362,4 @@ function moveBubbles(){
         key1.update();
 
     }
-
 }
