@@ -1,5 +1,8 @@
 //todo: implement way to get planets much bigger looking but same mass for easier visualization 
 // add scale bar, add gravity field lines
+//fix collisions
+// import noUiSlider from 'nouislider';
+// import 'nouislider/distribute/nouislider.css';
 
 var myGameArea;
 var canvasHeight = 900;
@@ -7,10 +10,7 @@ var canvasWidth = 1600;
 var mouseX = 0;
 var mouseY = 0;
 const t = 1/50; //this will be the time interval
-let scale = parseInt(window.prompt("Choose scale from 1-100")) || 0;
-    if (scale == 0){
-        scale = 50; 
-    }
+let scale = 50;
 var myGamePieceWidth = 20;
 var myGamePieceHeight = 20;
 var ballRadius = 20;
@@ -23,12 +23,18 @@ let nodeMap = new Map();
 var mouseNode;
 var myCircle;
 
+var rangeslider = document.getElementById("sliderRange"); 
+        // rangeslider.oninput = function() { 
+        //     // alert("Value = " + String(rangeslider.value)); 
+        // } 
+// let scale = rangeslider.value
+
 function startGame() {
     myGameArea.start();
     myGamePiece = new component( myGamePieceWidth, myGamePieceHeight,'red', 10, 30);
     mouseNode = new nodeComponent(0, 0, 0, 0, 'black', mouseX, mouseY);
     document.addEventListener("mousedown", function (event) {
-        if(isInCanvas()){
+        if(isInCanvas() && MouseInCanvas()){
             var clickedNodeObj = clickedNode();
             if (clickedNodeObj == null){
                 //TODO: make sure that you don't add and make connection
@@ -38,6 +44,17 @@ function startGame() {
     })
 }
 
+//slider goes here
+// var rangeslider = document.getElementById("sliderRange");
+// var output = document.getElementById("demo");
+// output.innerHTML = rangeslider.value;
+
+// rangeslider.oninput = function() {
+//   output.innerHTML = this.value;
+// }
+
+//slider goes here
+
 function isInCanvas(){
     var rect = canvas_obj.getBoundingClientRect();
     if (mouseX < rect.right && mouseX > 0 &&  
@@ -45,6 +62,18 @@ function isInCanvas(){
             return true;
         }
     return false;
+}
+
+function MouseInCanvas(){
+    if (mouseX > 1600 || mouseX < 0 ||  
+    mouseY > 900 || mouseY < 0) {//this means it's touching the borders
+//     if (key1.x > rect.right || key1.x < 0 ||  
+//         key1.y > rect.bottom || key1.y < rect.top) {//this means it's touching the borders
+
+    return false;}
+    else {
+        return true;
+    }
 }
 
 
@@ -161,21 +190,27 @@ function nodeComponent(xVelocity, yVelocity, mass, radius, color, x, y) {
     this.y = y;
     this.radius = radius;
     this.color = color;
-    var innerRad = 1/50*this.radius/Math.pow(10,7)*scale;
+    this.currentScale = scale; 
+    this.innerRad = 1/50*this.radius/Math.pow(10,7)*scale;
     this.outerRad = 3/50*this.radius/Math.pow(10,7)*scale;
 
     this.update = function () {
-        var gradient_center = ctx.createRadialGradient(this.x, this.y, innerRad, this.x, this.y, this.outerRad);
+        var gradient_center = ctx.createRadialGradient(this.x, this.y, this.innerRad, this.x, this.y, this.outerRad);
         gradient_center.addColorStop(0, 'pink');
         gradient_center.addColorStop(1, 'DeepPink');
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.outerRad, 0, 2 * Math.PI, false);
         ctx.fillStyle = gradient_center;
         ctx.fill();  
+        scale = rangeslider.value;
+        this.innerRad = this.innerRad*scale/this.currentScale;
+        this.outerRad = this.outerRad*scale/this.currentScale;
+        this.currentScale = scale; 
+        // this.outerRad += 1;
     }
     this.update_gradient = function () {
         
-        var gradient_outer = ctx.createRadialGradient(this.x, this.y, innerRad*10, this.x, this.y, this.outerRad);
+        var gradient_outer = ctx.createRadialGradient(this.x, this.y, this.innerRad*10, this.x, this.y, this.outerRad);
         gradient_outer.addColorStop(0, 'rgba(52, 124, 232, 0.0)');
         gradient_outer.addColorStop(1, 'rgba(52, 124, 232, 0.4)');
         ctx.beginPath();
@@ -248,6 +283,7 @@ function canMoveX(node, movement){
 }
 
 function moveBubbles(){
+    scale = rangeslider.value;
     for (let key1 of nodeMap.keys()) {
         let total_force = new force_vector();
         for (let key2 of nodeMap.keys()) {
@@ -264,9 +300,6 @@ function moveBubbles(){
                 var Yforce = -1*(y_diff/rad_diff)*G*key1.mass*key2.mass/Math.pow(rad_scaled/scale/scale,2);
                 total_force.x += Xforce
                 total_force.y += Yforce
-        
-            
-
                 if (Math.abs(rad_diff) <= (key1.outerRad + key2.outerRad)){//if two nodes are touching
                     let D = 1; //damping factor
                     let M = key1.mass + key2.mass;
@@ -276,15 +309,15 @@ function moveBubbles(){
                     let v2y = key2.yVelocity;
                     let m1 = key1.mass;
                     let m2 = key2.mass;
-                    if (key1.xVelocity*(key2.x-key1.x) > 0) { //if the x-velocity is the same direction as the object it's hitting 
-                        key1.xVelocity = D*(m1-m2)*v1x/M + (2*m2)*v2x/M
-                        key2.xVelocity = D*(2*m1)*v1x/M + (m2-m1)*v2x/M
-                    }
-                    if (key1.yVelocity*(key2.y-key1.y) > 0) { //if the y-velocity is the same direction as the object it's hitting 
+                    if (key1.yVelocity*(key2.y-key1.y) > 0 && Math.abs(key2.y-key1.y) < rad_diff) { //if the y-velocity is the same direction as the object it's hitting 
                         key1.yVelocity = D*(m1-m2)*v1y/M + (2*m2)*v2y/M
                         key2.yVelocity = D*(2*m1)*v1y/M + (m2-m1)*v2y/M
                     }
 
+                    if (key1.xVelocity*(key2.x-key1.x) > 0 && Math.abs(key2.x-key1.x) < rad_diff) { //if the x-velocity is the same direction as the object it's hitting 
+                        key1.xVelocity = D*(m1-m2)*v1x/M + (2*m2)*v2x/M
+                        key2.xVelocity = D*(2*m1)*v1x/M + (m2-m1)*v2x/M
+                    }
             }
         }
         }
@@ -296,3 +329,7 @@ function moveBubbles(){
         key1.update();
     }
 }
+
+
+
+
